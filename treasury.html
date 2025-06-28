@@ -3,110 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Treasury Movement Simulator</title>
+    <title>Treasury Simulator</title>
     <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1> Treasury Movement Simulator</h1>
-            <p>Manage virtual accounts across multiple currencies</p>
+            <h1> Treasury Simulator</h1>
+            <p>Multi-currency account management</p>
         </div>
-
-        <div class="main-content">
-            <div class="accounts-section">
-                <h2 class="section-title">
-                     Virtual Accounts
-                </h2>
-                
-                <div class="summary-stats">
-                    <div class="stat-card">
+        
+        <div class="main">
+            <div>
+                <div class="stats">
+                    <div class="stat">
                         <div class="stat-value" id="total-accounts">10</div>
-                        <div class="stat-label">Total Accounts</div>
+                        <div class="stat-label">Accounts</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat">
                         <div class="stat-value" id="total-balance">$0</div>
-                        <div class="stat-label">Total Balance (USD)</div>
+                        <div class="stat-label">Total (USD)</div>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat">
                         <div class="stat-value" id="total-transfers">0</div>
-                        <div class="stat-label">Total Transfers</div>
+                        <div class="stat-label">Transfers</div>
                     </div>
                 </div>
-
-                <div class="accounts-grid" id="accounts-grid">
-                    <!-- Accounts will be dynamically loaded here -->
-                </div>
-
-                <div class="transactions-log">
-                    <div class="log-header">
-                        <h3> Transaction Log</h3>
-                        <div class="filter-controls">
-                            <select class="filter-select" id="account-filter">
-                                <option value="">All Accounts</option>
-                            </select>
-                            <select class="filter-select" id="currency-filter">
-                                <option value="">All Currencies</option>
-                                <option value="KES">KES</option>
-                                <option value="USD">USD</option>
-                                <option value="NGN">NGN</option>
-                            </select>
-                            <button class="clear-btn" onclick="clearTransactions()">Clear All</button>
-                        </div>
-                    </div>
-                    <div id="transactions-container">
-                        <div class="empty-state">
-                            <p>No transactions yet. Start by making a transfer!</p>
-                        </div>
+                
+                <div class="accounts" id="accounts"></div>
+                
+                <div class="transactions">
+                    <h3>Recent Transactions</h3>
+                    <div id="transactions-list">
+                        <p style="text-align: center; color: #64748b; padding: 20px;">No transactions yet</p>
                     </div>
                 </div>
             </div>
-
-            <div class="transfer-section">
-                <h2 class="section-title">
-                      Transfer Funds
-                </h2>
-
-                <div class="transfer-form">
-                    <div class="form-group">
-                        <label class="form-label">From Account</label>
-                        <select class="form-select" id="from-account">
-                            <option value="">Select source account</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">To Account</label>
-                        <select class="form-select" id="to-account">
-                            <option value="">Select destination account</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Amount</label>
-                        <input type="number" class="form-input" id="transfer-amount" placeholder="Enter amount" step="0.01" min="0.01">
-                        <div id="fx-conversion-info"></div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Note (Optional)</label>
-                        <input type="text" class="form-input" id="transfer-note" placeholder="Transfer description">
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Transfer Date</label>
-                        <input type="datetime-local" class="form-input" id="transfer-date">
-                    </div>
-
-                    <button class="transfer-btn" id="transfer-btn" onclick="processTransfer()">
-                          Execute Transfer
-                    </button>
-
-                    <div id="transfer-message"></div>
+            
+            <div>
+                <h3>Transfer Funds</h3>
+                <div class="form-group">
+                    <label>From Account</label>
+                    <select id="from-account">
+                        <option value="">Select source</option>
+                    </select>
                 </div>
+                
+                <div class="form-group">
+                    <label>To Account</label>
+                    <select id="to-account">
+                        <option value="">Select destination</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Amount</label>
+                    <input type="number" id="amount" placeholder="0.00" step="0.01" min="0.01">
+                    <div id="fx-info" style="font-size: 12px; color: #64748b; margin-top: 4px;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Note</label>
+                    <input type="text" id="note" placeholder="Transfer description">
+                </div>
+                
+                <button class="btn" id="transfer-btn" onclick="transfer()">Execute Transfer</button>
+                <div id="message"></div>
             </div>
         </div>
     </div>
+
     <script src="script.js"></script>
 </body>
 </html>

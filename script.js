@@ -1,435 +1,209 @@
-
-        // Exchange rates (static for demo purposes)
-        const FX_RATES = {
-            'USD_KES': 150.50,
-            'USD_NGN': 785.20,
-            'KES_USD': 0.00664,
-            'KES_NGN': 5.22,
-            'NGN_USD': 0.00127,
-            'NGN_KES': 0.19
-        };
-
-        // Initialize accounts
+        const rates = { USD_KES: 150.5, USD_NGN: 785.2, KES_USD: 0.00664, KES_NGN: 5.22, NGN_USD: 0.00127, NGN_KES: 0.19 };
+        
         let accounts = [
-            { id: 'mpesa_kes_1', name: 'Mpesa_KES_1', currency: 'KES', balance: 250000.00 },
-            { id: 'mpesa_kes_2', name: 'Mpesa_KES_2', currency: 'KES', balance: 180000.00 },
-            { id: 'bank_kes_1', name: 'Bank_KES_1', currency: 'KES', balance: 450000.00 },
-            { id: 'bank_usd_1', name: 'Bank_USD_1', currency: 'USD', balance: 12500.00 },
-            { id: 'bank_usd_2', name: 'Bank_USD_2', currency: 'USD', balance: 8750.00 },
-            { id: 'bank_usd_3', name: 'Bank_USD_3', currency: 'USD', balance: 15000.00 },
-            { id: 'bank_ngn_1', name: 'Bank_NGN_1', currency: 'NGN', balance: 2500000.00 },
-            { id: 'bank_ngn_2', name: 'Bank_NGN_2', currency: 'NGN', balance: 1800000.00 },
-            { id: 'wallet_ngn_1', name: 'Wallet_NGN_1', currency: 'NGN', balance: 950000.00 },
-            { id: 'wallet_usd_1', name: 'Wallet_USD_1', currency: 'USD', balance: 5500.00 }
+            { id: 'mpesa1', name: 'Mpesa KES 1', currency: 'KES', balance: 500000 },
+            { id: 'mpesa2', name: 'Mpesa KES 2', currency: 'KES', balance: 220000 },
+            { id: 'bank_kes', name: 'Bank KES', currency: 'KES', balance: 450000 },
+            { id: 'bank_usd1', name: 'Bank USD 1', currency: 'USD', balance: 25000 },
+            { id: 'bank_usd2', name: 'Bank USD 2', currency: 'USD', balance: 18750 },
+            { id: 'bank_usd3', name: 'Bank USD 3', currency: 'USD', balance: 25000 },
+            { id: 'bank_ngn1', name: 'Bank NGN 1', currency: 'NGN', balance: 4500000 },
+            { id: 'bank_ngn2', name: 'Bank NGN 2', currency: 'NGN', balance: 3800000 },
+            { id: 'wallet_ngn', name: 'Wallet NGN', currency: 'NGN', balance: 1000000 },
+            { id: 'wallet_usd', name: 'Wallet USD', currency: 'USD', balance: 8500 }
         ];
-
+        
         let transactions = [];
-        let selectedFromAccount = null;
-        let selectedToAccount = null;
+        let selected = null;
 
-        // Initialize the application
-        document.addEventListener('DOMContentLoaded', function() {
+        function init() {
             renderAccounts();
-            populateAccountSelects();
-            updateSummaryStats();
-            setDefaultTransferDate();
-            setupEventListeners();
-        });
+            populateSelects();
+            updateStats();
+            setupEvents();
+        }
 
         function renderAccounts() {
-            const grid = document.getElementById('accounts-grid');
-            grid.innerHTML = '';
-
-            accounts.forEach(account => {
-                const card = document.createElement('div');
-                card.className = `account-card ${account.currency.toLowerCase()}`;
-                card.setAttribute('data-account-id', account.id);
-                card.innerHTML = `
-                    <div class="account-name">${account.name}</div>
-                    <div class="account-balance">${formatCurrency(account.balance, account.currency)}</div>
-                    <div class="account-currency">${account.currency} Account</div>
-                `;
-                
-                card.addEventListener('click', () => selectAccount(account.id));
-                grid.appendChild(card);
-            });
+            const container = document.getElementById('accounts');
+            container.innerHTML = accounts.map(acc => `
+                <div class="account ${acc.id === selected ? 'selected' : ''}" onclick="selectAccount('${acc.id}')">
+                    <div class="account-name">${acc.name}</div>
+                    <div class="account-balance">${formatMoney(acc.balance, acc.currency)}</div>
+                    <span class="currency ${acc.currency.toLowerCase()}">${acc.currency}</span>
+                </div>
+            `).join('');
         }
 
-        function populateAccountSelects() {
+        function populateSelects() {
             const fromSelect = document.getElementById('from-account');
             const toSelect = document.getElementById('to-account');
-            const accountFilter = document.getElementById('account-filter');
-
-            // Clear existing options
-            fromSelect.innerHTML = '<option value="">Select source account</option>';
-            toSelect.innerHTML = '<option value="">Select destination account</option>';
-            accountFilter.innerHTML = '<option value="">All Accounts</option>';
-
-            accounts.forEach(account => {
-                const option1 = new Option(`${account.name} (${formatCurrency(account.balance, account.currency)})`, account.id);
-                const option2 = new Option(`${account.name} (${formatCurrency(account.balance, account.currency)})`, account.id);
-                const option3 = new Option(account.name, account.id);
+            
+            fromSelect.innerHTML = '<option value="">Select source</option>' + 
+                accounts.map(acc => `<option value="${acc.id}">${acc.name} (${formatMoney(acc.balance, acc.currency)})</option>`).join('');
                 
-                fromSelect.appendChild(option1);
-                toSelect.appendChild(option2);
-                accountFilter.appendChild(option3);
-            });
+            toSelect.innerHTML = '<option value="">Select destination</option>' + 
+                accounts.map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
         }
 
-        function selectAccount(accountId) {
-            // Remove previous selections
-            document.querySelectorAll('.account-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-
-            // Add selection to clicked account
-            const clickedCard = document.querySelector(`[data-account-id="${accountId}"]`);
-            if (clickedCard) {
-                clickedCard.classList.add('selected');
-            }
-
-            // Auto-fill form if no source selected
-            const fromSelect = document.getElementById('from-account');
-            if (!fromSelect.value) {
-                fromSelect.value = accountId;
-                selectedFromAccount = accountId;
-                updateTransferValidation();
-            }
+        function selectAccount(id) {
+            selected = id;
+            document.getElementById('from-account').value = id;
+            renderAccounts();
+            updateToOptions();
+            validate();
         }
 
-        function setupEventListeners() {
-            const fromAccount = document.getElementById('from-account');
-            const toAccount = document.getElementById('to-account');
-            const transferAmount = document.getElementById('transfer-amount');
-            const accountFilter = document.getElementById('account-filter');
-            const currencyFilter = document.getElementById('currency-filter');
-
-            fromAccount.addEventListener('change', function() {
-                selectedFromAccount = this.value;
-                updateToAccountOptions();
-                updateTransferValidation();
-                calculateFXConversion();
-            });
-
-            toAccount.addEventListener('change', function() {
-                selectedToAccount = this.value;
-                updateTransferValidation();
-                calculateFXConversion();
-            });
-
-            transferAmount.addEventListener('input', function() {
-                updateTransferValidation();
-                calculateFXConversion();
-            });
-
-            accountFilter.addEventListener('change', filterTransactions);
-            currencyFilter.addEventListener('change', filterTransactions);
+        function setupEvents() {
+            document.getElementById('from-account').onchange = () => { updateToOptions(); validate(); updateFX(); };
+            document.getElementById('to-account').onchange = () => { validate(); updateFX(); };
+            document.getElementById('amount').oninput = () => { validate(); updateFX(); };
         }
 
-        function updateToAccountOptions() {
+        function updateToOptions() {
+            const fromId = document.getElementById('from-account').value;
             const toSelect = document.getElementById('to-account');
-            const fromAccountId = selectedFromAccount;
-            
-            // Clear and repopulate to-account options
-            toSelect.innerHTML = '<option value="">Select destination account</option>';
-            
-            accounts.forEach(account => {
-                if (account.id !== fromAccountId) {
-                    const option = new Option(`${account.name} (${formatCurrency(account.balance, account.currency)})`, account.id);
-                    toSelect.appendChild(option);
-                }
-            });
+            toSelect.innerHTML = '<option value="">Select destination</option>' + 
+                accounts.filter(acc => acc.id !== fromId).map(acc => `<option value="${acc.id}">${acc.name}</option>`).join('');
         }
 
-        function updateTransferValidation() {
-            const transferBtn = document.getElementById('transfer-btn');
-            const amount = parseFloat(document.getElementById('transfer-amount').value);
+        function validate() {
+            const fromId = document.getElementById('from-account').value;
+            const toId = document.getElementById('to-account').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const btn = document.getElementById('transfer-btn');
+            const msg = document.getElementById('message');
             
-            let isValid = true;
-            let errorMessage = '';
-
-            if (!selectedFromAccount || !selectedToAccount) {
-                isValid = false;
-                errorMessage = 'Please select both source and destination accounts';
-            } else if (!amount || amount <= 0) {
-                isValid = false;
-                errorMessage = 'Please enter a valid amount';
-            } else {
-                const fromAccount = accounts.find(acc => acc.id === selectedFromAccount);
-                if (fromAccount && amount > fromAccount.balance) {
-                    isValid = false;
-                    errorMessage = `Insufficient funds. Available: ${formatCurrency(fromAccount.balance, fromAccount.currency)}`;
-                }
-            }
-
-            transferBtn.disabled = !isValid;
-            
-            const messageDiv = document.getElementById('transfer-message');
-            if (!isValid && errorMessage) {
-                messageDiv.innerHTML = `<div class="error-message">${errorMessage}</div>`;
-            } else {
-                messageDiv.innerHTML = '';
-            }
-        }
-
-        function calculateFXConversion() {
-            const fromAccountId = selectedFromAccount;
-            const toAccountId = selectedToAccount;
-            const amount = parseFloat(document.getElementById('transfer-amount').value);
-            const infoDiv = document.getElementById('fx-conversion-info');
-
-            if (!fromAccountId || !toAccountId || !amount) {
-                infoDiv.innerHTML = '';
+            if (!fromId || !toId || !amount || amount <= 0) {
+                btn.disabled = true;
+                msg.innerHTML = '';
                 return;
             }
+            
+            const fromAcc = accounts.find(a => a.id === fromId);
+            if (amount > fromAcc.balance) {
+                btn.disabled = true;
+                msg.innerHTML = '<div class="message error">Insufficient funds</div>';
+                return;
+            }
+            
+            btn.disabled = false;
+            msg.innerHTML = '';
+        }
 
-            const fromAccount = accounts.find(acc => acc.id === fromAccountId);
-            const toAccount = accounts.find(acc => acc.id === toAccountId);
-
-            if (fromAccount.currency !== toAccount.currency) {
-                const rate = getFXRate(fromAccount.currency, toAccount.currency);
-                const convertedAmount = amount * rate;
-                
-                infoDiv.innerHTML = `
-                    <div class="fx-rate-info">
-                        💱 FX Conversion: ${formatCurrency(amount, fromAccount.currency)} → ${formatCurrency(convertedAmount, toAccount.currency)}
-                        <br>Rate: 1 ${fromAccount.currency} = ${rate.toFixed(4)} ${toAccount.currency}
-                    </div>
-                `;
+        function updateFX() {
+            const fromId = document.getElementById('from-account').value;
+            const toId = document.getElementById('to-account').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const info = document.getElementById('fx-info');
+            
+            if (!fromId || !toId || !amount) {
+                info.innerHTML = '';
+                return;
+            }
+            
+            const fromAcc = accounts.find(a => a.id === fromId);
+            const toAcc = accounts.find(a => a.id === toId);
+            
+            if (fromAcc.currency !== toAcc.currency) {
+                const rate = getRate(fromAcc.currency, toAcc.currency);
+                const converted = amount * rate;
+                info.innerHTML = `Converts to ${formatMoney(converted, toAcc.currency)} (Rate: ${rate.toFixed(4)})`;
             } else {
-                infoDiv.innerHTML = '';
+                info.innerHTML = '';
             }
         }
 
-        function getFXRate(fromCurrency, toCurrency) {
-            if (fromCurrency === toCurrency) return 1;
-            const key = `${fromCurrency}_${toCurrency}`;
-            return FX_RATES[key] || 1;
+        function getRate(from, to) {
+            return from === to ? 1 : rates[`${from}_${to}`] || 1;
         }
 
-        function processTransfer() {
-            const fromAccountId = selectedFromAccount;
-            const toAccountId = selectedToAccount;
-            const amount = parseFloat(document.getElementById('transfer-amount').value);
-            const note = document.getElementById('transfer-note').value;
-            const transferDate = document.getElementById('transfer-date').value;
-
-            const fromAccount = accounts.find(acc => acc.id === fromAccountId);
-            const toAccount = accounts.find(acc => acc.id === toAccountId);
-
-            // Calculate conversion if needed
-            let debitAmount = amount;
-            let creditAmount = amount;
+        function transfer() {
+            const fromId = document.getElementById('from-account').value;
+            const toId = document.getElementById('to-account').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const note = document.getElementById('note').value || 'Transfer';
             
-            if (fromAccount.currency !== toAccount.currency) {
-                creditAmount = amount * getFXRate(fromAccount.currency, toAccount.currency);
-            }
-
-            // Execute transfer
-            fromAccount.balance -= debitAmount;
-            toAccount.balance += creditAmount;
-
-            // Create transaction record
-            const transaction = {
-                id: generateTransactionId(),
-                timestamp: new Date(transferDate || Date.now()),
-                fromAccount: fromAccount.name,
-                toAccount: toAccount.name,
-                fromCurrency: fromAccount.currency,
-                toCurrency: toAccount.currency,
-                debitAmount: debitAmount,
-                creditAmount: creditAmount,
-                note: note || 'Fund transfer',
-                status: new Date(transferDate || Date.now()) > new Date() ? 'Pending' : 'Completed'
-            };
-
-            transactions.unshift(transaction);
-
-            // Update UI
-            renderAccounts();
-            populateAccountSelects();
-            updateSummaryStats();
-            renderTransactions();
-            resetTransferForm();
-
-            // Show success message
-            const messageDiv = document.getElementById('transfer-message');
-            messageDiv.innerHTML = `<div class="success-message">✅ Transfer completed successfully! Transaction ID: ${transaction.id}</div>`;
+            const fromAcc = accounts.find(a => a.id === fromId);
+            const toAcc = accounts.find(a => a.id === toId);
+            const rate = getRate(fromAcc.currency, toAcc.currency);
+            const converted = amount * rate;
             
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 5000);
-        }
-
-        function generateTransactionId() {
-            return 'TXN' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substr(2, 4).toUpperCase();
-        }
-
-        function resetTransferForm() {
-            document.getElementById('from-account').value = '';
-            document.getElementById('to-account').value = '';
-            document.getElementById('transfer-amount').value = '';
-            document.getElementById('transfer-note').value = '';
-            document.getElementById('fx-conversion-info').innerHTML = '';
+            fromAcc.balance -= amount;
+            toAcc.balance += converted;
             
-            selectedFromAccount = null;
-            selectedToAccount = null;
-            
-            document.querySelectorAll('.account-card').forEach(card => {
-                card.classList.remove('selected');
+            transactions.unshift({
+                id: 'TXN' + Date.now().toString(36).toUpperCase(),
+                time: new Date().toLocaleString(),
+                from: fromAcc.name,
+                to: toAcc.name,
+                amount: amount,
+                converted: converted,
+                fromCurrency: fromAcc.currency,
+                toCurrency: toAcc.currency,
+                note: note
             });
             
-            setDefaultTransferDate();
-        }
-
-        function setDefaultTransferDate() {
-            const now = new Date();
-            const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-            document.getElementById('transfer-date').value = localDateTime;
+            renderAccounts();
+            populateSelects();
+            updateStats();
+            renderTransactions();
+            resetForm();
+            
+            document.getElementById('message').innerHTML = '<div class="message success">Transfer completed successfully!</div>';
+            setTimeout(() => document.getElementById('message').innerHTML = '', 3000);
         }
 
         function renderTransactions() {
-            const container = document.getElementById('transactions-container');
-            
+            const container = document.getElementById('transactions-list');
             if (transactions.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No transactions yet. Start by making a transfer!</p></div>';
+                container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 20px;">No transactions yet</p>';
                 return;
             }
-
-            const table = document.createElement('table');
-            table.className = 'transactions-table';
-            table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>Transaction ID</th>
-                        <th>Date/Time</th>
-                        <th>From</th>
-                        <th>To</th>
-                        <th>Amount</th>
-                        <th>Note</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${transactions.map(tx => `
-                        <tr>
-                            <td><span class="transaction-id">${tx.id}</span></td>
-                            <td>${new Date(tx.timestamp).toLocaleString()}</td>
-                            <td>${tx.fromAccount} <span class="currency-badge currency-${tx.fromCurrency.toLowerCase()}">${tx.fromCurrency}</span></td>
-                            <td>${tx.toAccount} <span class="currency-badge currency-${tx.toCurrency.toLowerCase()}">${tx.toCurrency}</span></td>
-                            <td>
-                                <span class="amount-negative">-${formatCurrency(tx.debitAmount, tx.fromCurrency)}</span>
-                                ${tx.fromCurrency !== tx.toCurrency ? `<br><span class="amount-positive">+${formatCurrency(tx.creditAmount, tx.toCurrency)}</span>` : ''}
-                            </td>
-                            <td>${tx.note}</td>
-                            <td><span class="status-${tx.status.toLowerCase()}">${tx.status}</span></td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            `;
             
-            container.innerHTML = '';
-            container.appendChild(table);
+            container.innerHTML = transactions.slice(0, 5).map(tx => `
+                <div class="transaction">
+                    <div class="tx-header">
+                        <span>${tx.id}</span>
+                        <span>${tx.time}</span>
+                    </div>
+                    <div>${tx.from} → ${tx.to}</div>
+                    <div>
+                        ${formatMoney(tx.amount, tx.fromCurrency)}
+                        ${tx.fromCurrency !== tx.toCurrency ? ` → ${formatMoney(tx.converted, tx.toCurrency)}` : ''}
+                    </div>
+                    <div style="font-size: 12px; color: #64748b;">${tx.note}</div>
+                </div>
+            `).join('');
         }
 
-        function filterTransactions() {
-            const accountFilter = document.getElementById('account-filter').value;
-            const currencyFilter = document.getElementById('currency-filter').value;
-            
-            let filteredTransactions = transactions;
-            
-            if (accountFilter) {
-                const selectedAccount = accounts.find(acc => acc.id === accountFilter);
-                if (selectedAccount) {
-                    filteredTransactions = filteredTransactions.filter(tx => 
-                        tx.fromAccount === selectedAccount.name || tx.toAccount === selectedAccount.name
-                    );
-                }
-            }
-            
-            if (currencyFilter) {
-                filteredTransactions = filteredTransactions.filter(tx => 
-                    tx.fromCurrency === currencyFilter || tx.toCurrency === currencyFilter
-                );
-            }
-            
-            renderFilteredTransactions(filteredTransactions);
-        }
-
-        function renderFilteredTransactions(filteredTransactions) {
-            const container = document.getElementById('transactions-container');
-            
-            if (filteredTransactions.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No transactions match the selected filters.</p></div>';
-                return;
-            }
-
-            const table = document.createElement('table');
-            table.className = 'transactions-table';
-            table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>Transaction ID</th>
-                        <th>Date/Time</th>
-                        <th>From</th>
-                        <th>To</th>
-                        <th>Amount</th>
-                        <th>Note</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${filteredTransactions.map(tx => `
-                        <tr>
-                            <td><span class="transaction-id">${tx.id}</span></td>
-                            <td>${new Date(tx.timestamp).toLocaleString()}</td>
-                            <td>${tx.fromAccount} <span class="currency-badge currency-${tx.fromCurrency.toLowerCase()}">${tx.fromCurrency}</span></td>
-                            <td>${tx.toAccount} <span class="currency-badge currency-${tx.toCurrency.toLowerCase()}">${tx.toCurrency}</span></td>
-                            <td>
-                                <span class="amount-negative">-${formatCurrency(tx.debitAmount, tx.fromCurrency)}</span>
-                                ${tx.fromCurrency !== tx.toCurrency ? `<br><span class="amount-positive">+${formatCurrency(tx.creditAmount, tx.toCurrency)}</span>` : ''}
-                            </td>
-                            <td>${tx.note}</td>
-                            <td><span class="status-${tx.status.toLowerCase()}">${tx.status}</span></td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            `;
-            
-            container.innerHTML = '';
-            container.appendChild(table);
-        }
-
-        function updateSummaryStats() {
-            // Calculate total balance in USD
-            let totalBalanceUSD = 0;
-            accounts.forEach(account => {
-                if (account.currency === 'USD') {
-                    totalBalanceUSD += account.balance;
-                } else {
-                    totalBalanceUSD += account.balance * getFXRate(account.currency, 'USD');
-                }
+        function updateStats() {
+            let totalUSD = 0;
+            accounts.forEach(acc => {
+                totalUSD += acc.currency === 'USD' ? acc.balance : acc.balance * getRate(acc.currency, 'USD');
             });
-
-            document.getElementById('total-balance').textContent = formatCurrency(totalBalanceUSD, 'USD');
+            
+            document.getElementById('total-balance').textContent = formatMoney(totalUSD, 'USD');
             document.getElementById('total-transfers').textContent = transactions.length;
         }
 
-        function formatCurrency(amount, currency) {
+        function formatMoney(amount, currency) {
             const formatters = {
-                'USD': new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),
-                'KES': new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }),
-                'NGN': new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' })
+                USD: new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),
+                KES: new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }),
+                NGN: new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' })
             };
-            
-            return formatters[currency] ? formatters[currency].format(amount) : `${currency} ${amount.toFixed(2)}`;
+            return formatters[currency]?.format(amount) || `${currency} ${amount.toFixed(2)}`;
         }
 
-        function clearTransactions() {
-            if (confirm('Are you sure you want to clear all transaction history? This action cannot be undone.')) {
-                transactions = [];
-                renderTransactions();
-                updateSummaryStats();
-            }
+        function resetForm() {
+            document.getElementById('from-account').value = '';
+            document.getElementById('to-account').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('note').value = '';
+            document.getElementById('fx-info').innerHTML = '';
+            selected = null;
+            renderAccounts();
+            validate();
         }
-    
+
+        init();
